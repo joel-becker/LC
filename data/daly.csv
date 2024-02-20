@@ -1,0 +1,68 @@
+name_merge_data,name_daly_data,description,GHE2019,GBD2019,https://cdn.who.int/media/docs/default-source/gho-documents/global-health-estimates/ghe2019_daly-methods.pdf?sfvrsn=31b25009_7,"The symptom profiles have been taken from the nature paper (link added next to the table). The corresponding daily conventions have been added. 
+
+(The best solution I have found for connecting symptoms with daly adjustment is Matching the symptom with the most appropriate Health state (in Annex C) of WHO data
+https://www.who.int/data/gho/data/themes/mortality-and-global-health-estimates/global-health-estimates-leading-causes-of-dalys
+
+For hearing loss, it’s okay since there are many listed conversions (can be seen in the screenshot).
+
+But for others, 
+(1) Altered taste there is none (in this case maybe we could say it’s 0?),  Palpitations (I guess this could not be 0) etc
+(2) With some I can associate with something that’s on the list eg “Muscle aches/weakness” or “Other injuries of muscle and tendon (includes sprains, strains, and dislocations other than shoulder, knee, or hip)” can be found in the list 
+https://docs.google.com/spreadsheets/d/1KvUocIXg1xs30PA8Fa-Wjc8cLx0NNuxRpI73OrTvIkY/edit#gid=1295000896
+
+- The downsides of this: that is inaccurate, takes time
+- positive: prob okay data for most important symptoms)",GBD 2010,GBD 2004,Health burden coefficient,mild,moderate,severe,Health burden coefficient,,,"Patients with OD±GD had a lower median EQ-5D-5L value (0.70; Q1–Q3: 0.38–0.83; 95% CI 0.38 to 0.83) compared with those without OD or GD (0.83; Q1–Q3: 0.61–0.94; 95% CI 0.75 to 0.89); however, the difference was not statistically significant (p=0.0627).",https://www.ncbi.nlm.nih.gov/pmc/articles/PMC8795927/
+Problems hearing,Hearing loss: mild,"has great difficulty hearing and understanding another person talking in a noisy
+place (for example, on an urban street).",0.01,0.01,,,0.005,0.04,,1,0,0,0,,,,
+Problems hearing,Hearing loss: moderate,"is unable to hear and understand another person talking in a noisy place (for example, on an urban street), and has difficulty hearing another person talking even in a quiet place or on the phone.",0.05,0.027,,,0.023,0.12,,0,1,0,0,,,,
+Problems hearing,Hearing loss: severe,"is unable to hear and understand another person talking, even in a quiet place, and unable to take part in a phone conversation. Difficulties with communicating and relating to others cause emotional impact at times (for example worry or depression).",0.167,0.158,,,0.031,0.333,,0,0,1,0,,,,
+Problems hearing,,,,,,,,,0.031,0,0,0,1,,,,
+Breathlessness,"COPD and other chronic respiratory problems, mild","has cough and shortness of breath after heavy physical activity, but is able to walk long distances and climb stairs.",0.019,0.019,,,0.015,0.17,,1,0,0,0,,,,
+Breathlessness,"COPD and other chronic respiratory problems, moderate","has cough, wheezing and shortness of breath, even after light physical activity. The
+person feels tired and can walk only short distances or climb only a few stairs.",0.225,0.225,,,0.192,0.17,,0,1,0,0,,,,
+Breathlessness,"COPD and other chronic respiratory problems, severe","has cough, wheezing and shortness of breath all the time. The person has great
+difficulty walking even short distances or climbing any stairs, feels tired when at
+rest, and is anxious.",0.408,0.408,,,0.383,0.53,,0,0,1,0,,,,
+Breathlessness,Breathlessness,Mild and moderate respiratory disease*,,,,,,,0.138,0,0,0,1,,,,
+Dry cough,"COPD and other chronic respiratory problems, mild","has cough and shortness of breath after heavy physical activity, but is able to walk long distances and climb stairs.",0.019,0.019,,,0.015,0.17,,1,0,0,0,,,,
+Dry cough,"COPD and other chronic respiratory problems, moderate","has cough, wheezing and shortness of breath, even after light physical activity. The
+person feels tired and can walk only short distances or climb only a few stairs.",0.225,0.225,,,0.192,0.17,,0,1,0,0,,,,
+Dry cough,"COPD and other chronic respiratory problems, severe","has cough, wheezing and shortness of breath all the time. The person has great
+difficulty walking even short distances or climbing any stairs, feels tired when at
+rest, and is anxious.",0.408,0.408,,,0.383,0.53,,0,0,1,0,,,,
+Dry cough,Cough,Mild and moderate respiratory disease*,,,,,,,0.138,0,0,0,1,,,,
+Diarrhea,"Diarrhea, mild",has diarrhea three or more times a day with occasional discomfort in the belly.,0.074,0.074,,,0.061,None,,1,0,0,0,,,,
+Diarrhea,"Diarrhea, moderate","has diarrhea three or more times a day, with painful cramps in the belly and feeling thirsty",0.188,0.188,,,0.202,0.105,,0,1,0,0,,,,
+Diarrhea,"Diarrhea, severe",has diarrhea three or more times a day with severe belly cramps. The person is very thirsty and feels nauseous and tired.,0.247,0.247,,,0.281,None,,0,0,1,0,,,,
+Diarrhea,Diarrhea,Moderate diarrheal diseases,,,,,,,0.188,0,0,0,1,,,,
+Muscle aches/weakness,"Other injuries of muscle and tendon
+(includes sprains, strains and dislocations
+other than shoulder, knee, hip)",has a strained muscle that causes pain and swelling.,0.008,0.008,,,0.009,,,1,0,0,0,,,,
+Muscle aches/weakness,Myalgias,Myalgias,,,,,0.11,,0.11,0,0,0,1,,,,
+Headache,"Headache, migraine","has severe, throbbing head pain and nausea that cause great difficulty in daily
+activities and sometimes confine the person to bed. Moving around, light, and noise
+make it worse",0.441,0.441,,,0.433,0.288,,0,0,1,0,,,,
+Headache,"Headache, tension-type","has a moderate headache that also affects the neck, which causes difficulty in daily activities.",0.037,0.037,,,0.04,None,,0,1,0,0,,,,
+Headache,Headache,Tension-type headache,,,,,,,0.002,0,0,0,1,,,,
+Anxious/depressed,"Anxiety disorders, mild","feels mildly anxious and worried, which makes it slightly difficult to concentrate,
+remember things, and sleep. The person tires easily but is able to perform daily
+activities.",0.03,0.03,,,0.03,0.091,,1,0,0,0,,,,
+Anxious/depressed,"Anxiety disorders, moderate","feels anxious and worried, which makes it difficult to concentrate, remember things, and sleep. The person tires easily and finds it difficult to perform daily activities.",0.133,0.133,,,0.149,0.173,,0,1,0,0,,,,
+Anxious/depressed,"Anxiety disorders, severe","constantly feels very anxious and worried, which makes it difficult to concentrate, remember things and sleep. The person has lost pleasure in life and thinks about suicide",0.523,0.523,,,0.523,0.56,,0,0,1,0,,,,
+Anxious/depressed,Generalized anxiety disorder,Anxiety disorders,,,,,,,0.093,0,0,0,1,,,,
+Cough with phlegm,Cough,Mild and moderate respiratory disease*,,,,,,,0.138,0,0,0,1,,,,
+Altered taste,Loss of taste,Loss of taste,,,,,,,0.023,0,0,0,1,,,,
+Problems with eyesight,Vision abnormalities,Vision abnormalities,,,,,,,0.036,0,0,0,1,,,,
+Pins and needles,,,,,,,,,,0,0,0,1,,,,
+Chest pain,Angina,Angina,,,,,,,0.138,0,0,0,1,,,,
+Abdominal pain,Abdominal pain,Abdominal pain,,,,,,,0.124,0,0,0,1,,,,
+Sickness/vomiting,Vomiting,Vomitting,,,,,,,0.223,0,0,0,1,,,,
+Constipation,Constipation,Constipation,,,,,,,0.022,0,0,0,1,,,,
+Joint pain,Joint pain,Joint pain,,,,,,,0.11,0,0,0,1,,,,
+Confusion,,,,,,,,,,0,0,0,1,,,,
+Sleep problems,Sleep problems,Sleep problems,,,,,,,0.215,0,0,0,1,,,,
+Dizzy/blackouts/fits,Dizzy/blackouts/fits,Dizzy/blackouts/fits,,,,,,,0.215,0,0,0,1,,,,
+Balance problems,,,,,,,,,,0,0,0,1,,,,
+Tiredness,Somnolence,Fatigue*,,,,,,,0.215,0,0,0,1,,,,
+Weight loss,,,,,,,,,0.215,0,0,0,1,,,,
+Skin rash,,,,,,,,,,0,0,0,1,,,,
