@@ -20,7 +20,7 @@ param_descriptions = {
 default_params = {
     'size': 330_000,
     'baseline_risk': sq.norm(mean = 0.15, sd = 0.01), 
-    'infection_rate': sq.norm(mean=(19/330)/52, sd=0.0001),
+    'infection_rate': (sq.to(6687391, 40968288) / 330_000_000) / 52,
     'strain_reduction_factor': sq.norm(mean=0.6, sd=0.1), 
     'total_strains': 10, 
     'current_strain': 1, 
