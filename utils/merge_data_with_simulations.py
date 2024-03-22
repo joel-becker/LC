@@ -19,10 +19,12 @@ class DataSimulationsMerger:
         # Create a DataFrame to store the welfare loss for each individual
         welfare_loss_df = pd.DataFrame(index=long_covid_cases.index)
 
+        processed_cases = 0  # Initialize a counter for the number of processed cases
         for index, row in long_covid_cases.iterrows():
-            if index % 1000 == 0:
-                print(f"Processing {index} of {len(long_covid_cases)}")
-            total_welfare_loss = 0
+            processed_cases += 1  # Increment the counter for each case processed
+            if processed_cases % 1000 == 0:
+                print(f"Processing {processed_cases} of {len(long_covid_cases)}")
+            remaining_welfare = 1  # Start with 100% welfare
 
             # Get symptom prevalence integrals for this individual by random sampling
             symptom_prevalences = self.df_symptom_integrals.sample(n=1).iloc[0]
@@ -34,14 +36,16 @@ class DataSimulationsMerger:
             for symptom in self.data_daly['symptom'].unique():
                 daly_adjustments = self.data_daly[self.data_daly['symptom'] == symptom]
 
-                # Calculate the weighted DALY adjustment for each symptom
-                weighted_daly = sum(daly_adjustments['daly_adjustment'] * 
+                # Calculate the weighted DALY adjustment for each symptom as a percentage
+                weighted_daly_percentage = sum(daly_adjustments['daly_adjustment'] * 
                                     daly_adjustments[severity_proportions.keys()].mul(list(severity_proportions.values()), axis=0).sum(axis=1))
 
-                # Multiply the weighted DALY by the prevalence integral for the symptom
-                symptom_welfare_loss = weighted_daly * symptom_prevalences[symptom]
-                total_welfare_loss += symptom_welfare_loss
+                # Apply the DALY percentage loss to the remaining welfare
+                symptom_welfare_loss_factor = 1 - (weighted_daly_percentage * symptom_prevalences[symptom])
+                remaining_welfare *= symptom_welfare_loss_factor
 
+            # Calculate the total welfare loss, adjusted for long COVID risk
+            total_welfare_loss = 1 - remaining_welfare
             long_covid_cases.at[index, 'DALY_loss'] = total_welfare_loss * long_covid_cases.at[index, 'long_covid_risk']
 
         return long_covid_cases
