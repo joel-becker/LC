@@ -9,6 +9,7 @@ import utils.plots as plots
 import pickle
 import numpy as np
 import logging
+import time
 
 # Setup logging
 logging.basicConfig(filename='data_processing.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -59,19 +60,26 @@ def main():
             for index, row in comparison_table.iterrows():
                 row_str = '\t'.join(str(x) for x in row.values)
                 f.write(row_str + '\n')
-    except:
+    except Exception as e:
         logging.error('Error generating comparison table: %s', e)
     try:
         save_path = 'temp/results.pkl'
         lcs = LongCovidSimulator(
             params=params.default_params, 
             years=5, 
-            n_simulations=10, 
+            n_simulations=30, 
             verbose=False,
             save_path=save_path
             )
+        
+        start_time = time.time()  # Start timing
+        
         #df_simulation, df_weekly_stats = lcs.run_one_simulation()
         results = lcs.run_many_simulations()
+        
+        end_time = time.time()  # End timing
+        total_time = end_time - start_time  # Calculate total time taken
+        
         print(results)
 
         if results is not None:
@@ -79,7 +87,12 @@ def main():
                 pickle.dump(results, f)
 
         logging.info('Successfully ran simulations.')
-    except:
+        
+        # Calculate and log time per simulation-year
+        time_per_simulation_year = total_time / (lcs.years * lcs.n_simulations)
+        logging.info('Time per simulation-year: %f seconds', time_per_simulation_year)
+
+    except Exception as e:  # Modified to catch and log the exception properly
         logging.error('Error running simulations: %s', e)
 
     # Merge DALY and symptom prevalence data with simulation data
@@ -92,7 +105,7 @@ def main():
                 pickle.dump(df_merged, f)
 
         logging.info('Successfully merged data.')
-    except:
+    except Exception as e:
         logging.error('Error merging data: %s', e)
 
     # Tables and plots
@@ -103,6 +116,38 @@ def main():
     plots.plot_symptom_years_histograms(df_symptom_integrals, num_subplots=3) # Symptom prevalence, total years
     # # Internal simulation outcomes over time
     plots.plot_daly_loss_over_time(df_merged) # Total welfare loss, over time
+
+    # Robustness checks
+    try:
+        for param_name, param_values in params.robustness_params.items():
+            for param_value in param_values:
+                # Create a copy of the default parameters
+                params = params.default_params.copy()
+                
+                # Update the specific parameter value
+                params[param_name] = param_value
+                
+                # Create a unique save path for each parameter configuration
+                save_path = f"output/tables/{param_name}_{param_value}.csv"
+                
+                # Run the simulation with the updated parameters
+                lcs = LongCovidSimulator(
+                    params=params, 
+                    years=5, 
+                    n_simulations=30, 
+                    verbose=False,
+                    save_path=save_path
+                )
+                results = lcs.run_many_simulations()
+                wlc = DataSimulationsMerger(results, df_symptom_integrals, data_daly)
+                df_merged = wlc.calculate_welfare_loss()
+                
+                # Save the merged DataFrame to a file
+                df_merged.to_csv(save_path, index=False)
+        
+        logging.info('Successfully ran robustness checks.')
+    except Exception as e:
+        logging.error('Error running robustness checks: %s', e)
 
     logging.info('Data processing completed.')
 
