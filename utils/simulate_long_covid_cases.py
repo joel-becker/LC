@@ -2,7 +2,6 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 import squigglepy as sq
-import concurrent.futures
 
 class Population:
     def __init__(
@@ -42,6 +41,14 @@ class Population:
         self.vaccination_effectiveness_halflife = param_values['vaccination_effectiveness_halflife']
         self.vaccination_hazard_rate = param_values['vaccination_hazard_rate']
         self.aor_value = param_values['aor_value']
+    
+        # Assign vaccination types
+        vaccination_types = ['never_vaccinated', 'two_shots', 'boosted_yearly']
+        vaccination_type_probabilities = [
+            params['p_never_vaccinated'],
+            params['p_two_shots'],
+            params['p_boosted_yearly']
+        ]
 
         self.verbose = verbose
 
@@ -52,6 +59,7 @@ class Population:
             'covid_infections': np.zeros(self.size),
             'vaccination_count': self.initialize_vaccination_counts(),
             'last_vaccination_date': np.full(self.size, self.current_date - pd.Timedelta(days=self.vaccination_interval)),
+            'vaccination_type': np.random.choice(vaccination_types, size=self.size, p=vaccination_type_probabilities),
             'current_strain': pd.Series([pd.NA] * self.size),
             'long_covid_risk': np.full(self.size, self.baseline_risk),
             'has_long_covid': np.zeros(self.size, dtype=bool)
@@ -85,6 +93,10 @@ class Population:
 
         :return: A dictionary representing the distribution of strains.
         """
+        # Immediately return a default distribution if strain_reduction_factor is 0
+        if self.strain_reduction_factor == 0:
+            return {0: 1.0}
+        
         # Calculate the number of weeks since the start of the simulation
         weeks_since_start = (week_data['week_start'] - self.current_date).days // 7
 
@@ -107,24 +119,39 @@ class Population:
         self.data.loc[new_infections, 'covid_infections'] += 1
         self.data.loc[new_infections, 'last_infection_date'] = week_data['week_start']
 
-        # Assign strains based on the distribution
-        strain_distribution = self.get_strain_distribution(week_data)
-        for strain, proportion in strain_distribution.items():
-            assigned_strain = new_infections & (np.random.rand(self.size) < proportion)
-            self.data.loc[assigned_strain, 'current_strain'] = strain
+        # Skip strain assignment if strain_reduction_factor is 0
+        if self.strain_reduction_factor != 0:
+            # Else assign strains based on the distribution
+            strain_distribution = self.get_strain_distribution(week_data)
+            for strain, proportion in strain_distribution.items():
+                assigned_strain = new_infections & (np.random.rand(self.size) < proportion)
+                self.data.loc[assigned_strain, 'current_strain'] = strain
 
     def update_vaccination_status(self, week_data):
-        days_since_last_vaccination = (week_data['week_start'] - self.data['last_vaccination_date']).dt.days
-        eligible_for_vaccination = days_since_last_vaccination > self.vaccination_interval
-        # Simulating some proportion of the eligible population getting vaccinated each week
-        getting_vaccinated = eligible_for_vaccination & (np.random.rand(self.size) < self.vaccination_hazard_rate)
-        self.data.loc[getting_vaccinated, 'last_vaccination_date'] = week_data['week_start']
-        self.data.loc[getting_vaccinated, 'vaccination_count'] += 1
+        # Update vaccination status for individuals with 'boosted_yearly' only
+        boosted_yearly_mask = self.data['vaccination_type'] == 'boosted_yearly'
+        days_since_last_boost = (week_data['week_start'] - self.data.loc[boosted_yearly_mask, 'last_vaccination_date']).dt.days
+        eligible_for_boost = days_since_last_boost > 365  # Assuming yearly boosting
+        getting_boosted = eligible_for_boost
+        self.data.loc[boosted_yearly_mask & getting_boosted, 'last_vaccination_date'] = week_data['week_start']
+        self.data.loc[boosted_yearly_mask & getting_boosted, 'vaccination_count'] += 1
+
+        # days_since_last_vaccination = (week_data['week_start'] - self.data['last_vaccination_date']).dt.days
+        # eligible_for_vaccination = days_since_last_vaccination > self.vaccination_interval
+        # # Simulating some proportion of the eligible population getting vaccinated each week
+        # getting_vaccinated = eligible_for_vaccination & (np.random.rand(self.size) < self.vaccination_hazard_rate)
+        # self.data.loc[getting_vaccinated, 'last_vaccination_date'] = week_data['week_start']
+        # self.data.loc[getting_vaccinated, 'vaccination_count'] += 1
 
     def calculate_long_covid_risk(self, week_data):
         aor_adjustment = self.calculate_aor_adjustment()
         vaccination_adjustment = self.calculate_vaccination_adjustment(week_data)
-        strain_adjustment = self.calculate_strain_adjustment()
+        
+        # Set strain_adjustment to 1 directly if strain_reduction_factor is 0
+        if self.strain_reduction_factor == 0:
+            strain_adjustment = 1
+        else:
+            strain_adjustment = self.calculate_strain_adjustment()
 
         self.data['aor_adjustment'] = aor_adjustment
         self.data['vaccination_adjustment'] = vaccination_adjustment
@@ -172,21 +199,36 @@ class Population:
         return aor_adjustment
         
     def calculate_vaccination_adjustment(self, week_data):
-        last_vaccination_dates = self.data['last_vaccination_date']
-        time_since_vaccination = (week_data['week_start'] - last_vaccination_dates).dt.days
-
         # Initialize adjustment array with 1 (no reduction in risk)
         vaccination_adjustment = np.ones(self.size)
 
-        # Identify vaccinated individuals
-        vaccinated = self.data['vaccination_count'] > 0
-
-        # Calculate vaccination effectiveness for vaccinated individuals
+        # Calculate adjustment for individuals with 'two_shots'
+        two_shots_mask = self.data['vaccination_type'] == 'two_shots'
+        last_vaccination_dates = self.data.loc[two_shots_mask, 'last_vaccination_date']
+        time_since_vaccination = (week_data['week_start'] - last_vaccination_dates).dt.days
         vaccination_decayrate = np.log(2) / self.vaccination_effectiveness_halflife
-        vaccination_effectiveness = np.exp(
-            -vaccination_decayrate * time_since_vaccination[vaccinated]
-            ) * self.vaccination_reduction
-        vaccination_adjustment[vaccinated] = 1 - vaccination_effectiveness
+        vaccination_effectiveness = np.exp(-vaccination_decayrate * time_since_vaccination) * self.vaccination_reduction
+        vaccination_adjustment[two_shots_mask] = 1 - vaccination_effectiveness
+
+        # Calculate adjustment for individuals with 'boosted_yearly'
+        boosted_yearly_mask = self.data['vaccination_type'] == 'boosted_yearly'
+        vaccination_adjustment[boosted_yearly_mask] = 1 - self.vaccination_reduction
+
+        #last_vaccination_dates = self.data['last_vaccination_date']
+        #time_since_vaccination = (week_data['week_start'] - last_vaccination_dates).dt.days
+        #
+        ## Initialize adjustment array with 1 (no reduction in risk)
+        #vaccination_adjustment = np.ones(self.size)
+        #
+        ## Identify vaccinated individuals
+        #vaccinated = self.data['vaccination_count'] > 0
+        #
+        ## Calculate vaccination effectiveness for vaccinated individuals
+        #vaccination_decayrate = np.log(2) / self.vaccination_effectiveness_halflife
+        #vaccination_effectiveness = np.exp(
+        #    -vaccination_decayrate * time_since_vaccination[vaccinated]
+        #    ) * self.vaccination_reduction
+        #vaccination_adjustment[vaccinated] = 1 - vaccination_effectiveness
 
         return vaccination_adjustment
 
