@@ -18,26 +18,28 @@ param_descriptions = {
 }
 
 default_params = {
-    'size': 330_000,
-    'baseline_risk': sq.norm(mean = 0.15, sd = 0.01), 
+    'size': int(round(330_000_000 / 30_000)),
+    'baseline_risk': sq.beta(20*0.15, 20*(1-0.15)), 
     'infection_rate': (sq.to(6687391, 40968288) / 330_000_000) / 52,
-    'strain_reduction_factor': sq.norm(mean=0.6, sd=0.1), 
+    'strain_reduction_factor': 0, 
     'total_strains': 10, 
     'current_strain': 1, 
     'strain_decay': 50,
     'initial_vaccination_distribution': {0: 0.2, 1: 0.2, 2: 0.3, 3:0.2, 4:0.1},
     'vaccination_reduction': sq.beta(100*0.25, 100*(1-0.25)), 
     'vaccination_interval': 180, 
-    'vaccination_effectiveness_halflife': sq.norm(mean=235, sd=30), 
+    'vaccination_effectiveness_halflife': sq.norm(mean=148, sd=50), 
     'vaccination_hazard_rate': sq.beta(1000*0.01, 1000*(1-0.01)),
+    'p_never_vaccinated': 0.2,
+    'p_two_shots': 0.5,
+    'p_boosted_yearly': 0.3,
     'aor_value': sq.beta(100*0.72, 100*(1-0.72))
     # Default values for other parameters
 }
 
-# Example scenario override
-pessimistic_params = {
-    'infection_rate': (25/330)/52,  # Higher infection rate in pessimistic scenario
-    # Other overrides
+robustness_params = {
+    'baseline_risk': [0.1, 0.15, 0.2],
+    'infection_rate': [0.01, 0.03, 0.05],
 }
 
 def merge_and_describe_parameters(default_params, scenario_params, descriptions):
