@@ -1,0 +1,14 @@
+Parameter	Description	Mainline	Pessimistic
+size	Total population size	3.3e+03	3.3e+03
+baseline_risk	Baseline risk of long COVID	Beta(3, 17)	Beta(3, 17)
+infection_rate	Weekly infection rate	Distribution	0.00146
+strain_reduction_factor	Reduction factor for new strains	0	0
+total_strains	Number of distinct strains	10	10
+current_strain	Current strain	1	1
+strain_decay	Half-life of strain relative prevalence	50	50
+initial_vaccination_distribution	Initial distribution of number of vaccinations per person	{0: '0.2', 1: '0.2', 2: '0.3', 3: '0.2', 4: '0.1'}	{0: '0.2', 1: '0.2', 2: '0.3', 3: '0.2', 4: '0.1'}
+vaccination_reduction	Peak effectiveness of vaccination (against Long COVID, conditional on COVID)	Beta(25, 75)	Beta(25, 75)
+vaccination_interval	Minimum interval between vaccinations	180	180
+vaccination_effectiveness_halflife	Half-life of vaccination effectiveness	Normal(148, 50)	Normal(148, 50)
+vaccination_hazard_rate	Hazard rate of receiving vaccination	Beta(10, 990)	Beta(10, 990)
+aor_value	AOR value	Beta(72, 28)	Beta(72, 28)
