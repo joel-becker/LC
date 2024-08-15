@@ -18,8 +18,8 @@ logging.info('Data processing started.')
 
 
 def main():
-    years = 5
-    n_simulations = 10
+    years = 20
+    n_simulations = 100
     population_size_deflator = 30_000
 
     # Setup logging
@@ -116,9 +116,10 @@ def main():
 
     # Tables and plots
     plots.plot_daly_adjustments(data_daly) # DALYs per symptom
-    plots.plot_all_symptoms(
-        spe.trace, data_symptom_prevalence['symptom'].unique().tolist(), time_points=np.linspace(0, 18, 100)
-        ) # Symptom prevalence, decay over time
+    #plots.plot_all_symptoms(
+    #    spe.trace, data_symptom_prevalence['symptom'].unique().tolist(), time_points=np.linspace(0, 18, 100)
+    #    ) # Symptom prevalence, decay over time
+    plots.plot_symptom_prevalence_over_time(df_symptom_integrals)
     plots.plot_symptom_years_histograms(df_symptom_integrals, num_subplots=3) # Symptom prevalence, total years
     # # Internal simulation outcomes over time
     plots.plot_daly_loss_over_time(df_merged, population_size_deflator) # Total welfare loss, over time
@@ -139,17 +140,19 @@ def main():
                 params_copy['size'] = int(round(params_copy['size'] / population_size_deflator))
                 
                 # Create a unique save path for each parameter configuration
-                save_path = f"output/tables/{param_name}_{param_value}.csv"
+                save_path = f"output/tables/robustness/{param_name}_{param_value}.csv"
                 
                 # Run the simulation with the updated parameters
                 lcs = LongCovidSimulator(
                     params=params_copy, 
-                    years=3, 
-                    n_simulations=100, 
+                    years=years, 
+                    n_simulations=int(n_simulations/3), 
                     verbose=False,
                     save_path=save_path
                 )
                 results = lcs.run_many_simulations()
+                print(results)
+
                 wlc = DataSimulationsMerger(results, df_symptom_integrals, data_daly)
                 df_merged = wlc.calculate_welfare_loss()
                 
