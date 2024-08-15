@@ -59,7 +59,6 @@ class Population:
         self.data = pd.DataFrame({
             'individual_id': range(self.size),
             'covid_infections': np.zeros(self.size),
-            'vaccination_count': self.initialize_vaccination_counts(),
             'last_vaccination_date': np.full(self.size, self.current_date - pd.Timedelta(days=self.vaccination_interval)),
             'vaccination_type': np.random.choice(vaccination_types, size=self.size, p=vaccination_type_probabilities),
             'current_strain': pd.Series([pd.NA] * self.size),
@@ -80,14 +79,6 @@ class Population:
                 param_values[key] = value
         return param_values
     
-    def initialize_vaccination_counts(self):
-        counts = np.random.choice(
-            a=list(self.initial_vaccination_distribution.keys()), 
-            p=list(self.initial_vaccination_distribution.values()), 
-            size=self.size
-        )
-        return counts
-
 
     def get_strain_distribution(self, week_data):
         """
@@ -128,22 +119,6 @@ class Population:
             for strain, proportion in strain_distribution.items():
                 assigned_strain = new_infections & (np.random.rand(self.size) < proportion)
                 self.data.loc[assigned_strain, 'current_strain'] = strain
-
-    def update_vaccination_status(self, week_data):
-        # Update vaccination status for individuals with 'boosted_yearly' only
-        boosted_yearly_mask = self.data['vaccination_type'] == 'boosted_yearly'
-        days_since_last_boost = (week_data['week_start'] - self.data.loc[boosted_yearly_mask, 'last_vaccination_date']).dt.days
-        eligible_for_boost = days_since_last_boost > 365  # Assuming yearly boosting
-        getting_boosted = eligible_for_boost
-        self.data.loc[boosted_yearly_mask & getting_boosted, 'last_vaccination_date'] = week_data['week_start']
-        self.data.loc[boosted_yearly_mask & getting_boosted, 'vaccination_count'] += 1
-
-        # days_since_last_vaccination = (week_data['week_start'] - self.data['last_vaccination_date']).dt.days
-        # eligible_for_vaccination = days_since_last_vaccination > self.vaccination_interval
-        # # Simulating some proportion of the eligible population getting vaccinated each week
-        # getting_vaccinated = eligible_for_vaccination & (np.random.rand(self.size) < self.vaccination_hazard_rate)
-        # self.data.loc[getting_vaccinated, 'last_vaccination_date'] = week_data['week_start']
-        # self.data.loc[getting_vaccinated, 'vaccination_count'] += 1
 
     def calculate_long_covid_risk(self, week_data):
         #aor_adjustment = self.calculate_aor_adjustment()
@@ -275,7 +250,6 @@ class Simulation:
     def simulate_week(self, week_data):
         self.population.reset_long_covid_status()
         self.population.update_infection_status(week_data)
-        self.population.update_vaccination_status(week_data)
         self.population.calculate_long_covid_risk(week_data)
         self.record_weekly_statistics(week_data)
 
@@ -289,7 +263,6 @@ class Simulation:
         avg_infections = self.weekly_data['covid_infections'].mean()
         infection_distribution_by_strain = self.weekly_data.groupby('current_strain')['covid_infections'].count()
         avg_days_since_vaccination = (week_data['week_start'] - self.weekly_data['last_vaccination_date']).dt.days.mean()
-        avg_vaccinations = (self.weekly_data['vaccination_count']).mean()
         avg_long_covid_risk = self.weekly_data['long_covid_risk'].mean()
         avg_strain = self.weekly_data['current_strain'].mean()
 
@@ -298,29 +271,18 @@ class Simulation:
         avg_vaccination_adjustment = self.weekly_data['vaccination_adjustment'].mean()
         avg_strain_adjustment = self.weekly_data['strain_adjustment'].mean()
 
-        # Counting the number of people with different vaccination counts
-        vac_count_0 = (self.weekly_data['vaccination_count'] == 0).sum()
-        vac_count_1_2 = self.weekly_data['vaccination_count'].between(1, 2).sum()
-        vac_count_3_4 = self.weekly_data['vaccination_count'].between(3, 4).sum()
-        vac_count_4_plus = (self.weekly_data['vaccination_count'] >= 4).sum()
-
         self.weekly_summary.append({
             'week': week_data['week_start'],
             'new_long_covid_cases': weekly_cases,
             'average_infections': avg_infections,
             'infection_distribution_by_strain': infection_distribution_by_strain.to_dict(),
             'average_days_since_last_vaccination': avg_days_since_vaccination,
-            'average_vaccinations': avg_vaccinations,
             'average_long_covid_risk': avg_long_covid_risk,
             'average_strain': avg_strain,
             #'average_aor_adjustment': avg_aor_adjustment,
             'average_covid_risk_adjustment': avg_covid_risk_adjustment,
             'average_vaccination_adjustment': avg_vaccination_adjustment,
             'average_strain_adjustment': avg_strain_adjustment,
-            'vaccinations_0': vac_count_0,
-            'vaccinations_1_2': vac_count_1_2,
-            'vaccinations_3_4': vac_count_3_4,
-            'vaccinations_4_plus': vac_count_4_plus
         })
 
     def run(self, duration):
