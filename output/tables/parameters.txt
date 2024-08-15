@@ -1,7 +1,7 @@
 Parameter	Description	Mainline	Pessimistic
-size	Total population size	3.3e+03	3.3e+03
-baseline_risk	Baseline risk of long COVID	Beta(3, 17)	Beta(3, 17)
-infection_rate	Weekly infection rate	Distribution	0.00146
+size	Total population size	3.3e+08	3.3e+08
+baseline_risk	Baseline risk of long COVID	Beta(3, 17)	Distribution
+infection_rate	Weekly infection rate	Distribution	Distribution
 strain_reduction_factor	Reduction factor for new strains	0	0
 total_strains	Number of distinct strains	10	10
 current_strain	Current strain	1	1
