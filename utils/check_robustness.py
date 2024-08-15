@@ -2,7 +2,13 @@ import os
 
 robustness_params = {
     'baseline_risk': [0.1, 0.15, 0.2],
-    'infection_rate': [0.01, 0.03, 0.05],
+    'infection_rate': [
+        6687391 / (330_000_000 * 52), 
+        19000000 / (330_000_000 * 52), 
+        40968288 / (330_000_000 * 52)
+        ],
+    'vaccination_reduction': [0, 0.25, 0.75],
+    'vaccination_effectiveness_halflife': [75, 148, 300],
 }
 
 def run_simulation(params, save_path, df_symptom_integrals, data_daly):

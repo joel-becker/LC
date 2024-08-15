@@ -129,4 +129,46 @@ class SymptomPrevalenceEstimator:
     def _decay_func(t, baseline, decay_rate):
         return baseline * np.exp(-decay_rate * t)
     
+import pandas as pd
+import numpy as np
+import squigglepy as sq
 
+class PiecewiseConstantIntegralEstimator:
+    def __init__(self, data_symptom_prevalence, num_draws=4000, std_dev=0.01):
+        self.data_symptom_prevalence = data_symptom_prevalence
+        self.n_symptoms = len(data_symptom_prevalence)
+        self.symptom_names = self.data_symptom_prevalence['symptom'].values
+        self.time_intervals = [(0, 6), (6, 12), (12, 18)]
+        self.num_draws = num_draws
+        self.std_dev = std_dev
+
+    def _calculate_beta_params(self, mean, std_dev):
+        var = std_dev ** 2
+        alpha = mean * (mean * (1 - mean) / var - 1)
+        beta = alpha * (1 / mean - 1)
+        return alpha, beta
+
+    def calculate_piecewise_constant_integrals_with_uncertainty(self, include_uncertainty=False):
+        symptom_integrals = []
+
+        for _, row in self.data_symptom_prevalence.iterrows():
+            integrals = []
+            for (start, end), prevalence_col in zip(self.time_intervals, ['prevalence_diff_6m', 'prevalence_diff_12m', 'prevalence_diff_18m']):
+                prevalence = row[prevalence_col] / 100  # Convert prevalence to proportion
+                if include_uncertainty:
+                    alpha, beta = self._calculate_beta_params(prevalence, self.std_dev)
+                    prevalence_samples = sq.beta(alpha, beta) @ self.num_draws
+                else:
+                    prevalence_samples = np.full(self.num_draws, prevalence)
+                interval_length = end - start
+                integrals.append(prevalence_samples * interval_length / 12)  # Convert to annual basis
+            symptom_integrals.append(np.sum(integrals, axis=0))
+
+        symptom_integrals_df = pd.DataFrame(np.array(symptom_integrals).T, columns=self.symptom_names)
+        return symptom_integrals_df
+
+    def calculate_normalized_piecewise_constant_integrals_with_uncertainty(self, include_uncertainty=False):
+        symptom_integrals_df = self.calculate_piecewise_constant_integrals_with_uncertainty(include_uncertainty)
+        max_per_row = symptom_integrals_df.max(axis=1)
+        normalized_symptom_integrals_df = symptom_integrals_df.div(max_per_row, axis=0)
+        return normalized_symptom_integrals_df

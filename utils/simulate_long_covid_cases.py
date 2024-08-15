@@ -19,7 +19,8 @@ class Population:
                 'vaccination_interval': 180, 
                 'vaccination_effectiveness_halflife': 1/365, 
                 'vaccination_hazard_rate': sq.beta(1000*0.01, 1000*(1-0.01)),
-                'aor_value': sq.beta(100*0.72, 100*(1-0.72))
+                #'aor_value': sq.beta(100*0.72, 100*(1-0.72)),
+                'covid_risk_reduction_factor': 0.7
             },
             verbose=True
             ):
@@ -40,7 +41,8 @@ class Population:
         self.vaccination_interval = param_values['vaccination_interval']
         self.vaccination_effectiveness_halflife = param_values['vaccination_effectiveness_halflife']
         self.vaccination_hazard_rate = param_values['vaccination_hazard_rate']
-        self.aor_value = param_values['aor_value']
+        #self.aor_value = param_values['aor_value']
+        self.covid_risk_reduction_factor = param_values['covid_risk_reduction_factor']
     
         # Assign vaccination types
         vaccination_types = ['never_vaccinated', 'two_shots', 'boosted_yearly']
@@ -144,8 +146,21 @@ class Population:
         # self.data.loc[getting_vaccinated, 'vaccination_count'] += 1
 
     def calculate_long_covid_risk(self, week_data):
-        aor_adjustment = self.calculate_aor_adjustment()
+        #aor_adjustment = self.calculate_aor_adjustment()
+    
+        # Calculate the COVID risk adjustment based on the number of years passed
+        years_passed = (week_data['week_start'] - self.current_date).days // 365
+        covid_risk_adjustment = self.covid_risk_reduction_factor ** years_passed
+
         vaccination_adjustment = self.calculate_vaccination_adjustment(week_data)
+
+        # Set strain_adjustment to 1 directly if strain_reduction_factor is 0
+        if self.strain_reduction_factor == 0:
+            strain_adjustment = 1
+        else:
+            strain_adjustment = self.calculate_strain_adjustment()
+
+            vaccination_adjustment = self.calculate_vaccination_adjustment(week_data)
         
         # Set strain_adjustment to 1 directly if strain_reduction_factor is 0
         if self.strain_reduction_factor == 0:
@@ -153,12 +168,20 @@ class Population:
         else:
             strain_adjustment = self.calculate_strain_adjustment()
 
-        self.data['aor_adjustment'] = aor_adjustment
+        #self.data['aor_adjustment'] = aor_adjustment
+    
+        # Add this line
+        self.data['covid_risk_adjustment'] = covid_risk_adjustment
+
         self.data['vaccination_adjustment'] = vaccination_adjustment
         self.data['strain_adjustment'] = strain_adjustment
 
-        adjusted_risk = self.baseline_risk * aor_adjustment * vaccination_adjustment * strain_adjustment
+        # Multiply the baseline risk by the COVID risk adjustment
+        adjusted_risk = self.baseline_risk * covid_risk_adjustment * vaccination_adjustment * strain_adjustment
         self.data['long_covid_risk'] = adjusted_risk
+
+        #adjusted_risk = self.baseline_risk * aor_adjustment * vaccination_adjustment * strain_adjustment
+        #self.data['long_covid_risk'] = adjusted_risk
 
         # Determine Long COVID cases
         current_infections = self.data['last_infection_date'] == week_data['week_start']
@@ -179,24 +202,24 @@ class Population:
         self.data['has_long_covid'] = False
         self.data['current_strain'] = pd.NA
         
-    def calculate_aor_adjustment(self):
-        # Ensure infection_counts is an integer array for correct iteration
-        infection_counts = self.data['covid_infections'] - 1 # Subtract 1 to exclude current infection
-        infection_counts = infection_counts.astype(int)
-    
-        # Initialize the adjusted risk with the baseline risk
-        adjusted_risk = np.full_like(infection_counts, self.baseline_risk, dtype=float)
-    
-        # Iteratively apply the aOR adjustment for each subsequent infection
-        for i in range(1, infection_counts.max() + 1):
-            is_ith_infection = infection_counts >= i
-            p2 = adjusted_risk * self.aor_value / (1 + adjusted_risk * (self.aor_value - 1))
-            adjusted_risk[is_ith_infection] = p2[is_ith_infection]
-
-        # Calculate multiplicative adjustment
-        aor_adjustment = adjusted_risk / self.baseline_risk
-    
-        return aor_adjustment
+    #def calculate_aor_adjustment(self):
+    #    # Ensure infection_counts is an integer array for correct iteration
+    #    infection_counts = self.data['covid_infections'] - 1 # Subtract 1 to exclude current infection
+    #    infection_counts = infection_counts.astype(int)
+    #
+    #    # Initialize the adjusted risk with the baseline risk
+    #    adjusted_risk = np.full_like(infection_counts, self.baseline_risk, dtype=float)
+    #
+    #    # Iteratively apply the aOR adjustment for each subsequent infection
+    #    for i in range(1, infection_counts.max() + 1):
+    #        is_ith_infection = infection_counts >= i
+    #        p2 = adjusted_risk * self.aor_value / (1 + adjusted_risk * (self.aor_value - 1))
+    #        adjusted_risk[is_ith_infection] = p2[is_ith_infection]
+    #
+    #    # Calculate multiplicative adjustment
+    #    aor_adjustment = adjusted_risk / self.baseline_risk
+    #
+    #    return aor_adjustment
         
     def calculate_vaccination_adjustment(self, week_data):
         # Initialize adjustment array with 1 (no reduction in risk)
@@ -270,7 +293,8 @@ class Simulation:
         avg_long_covid_risk = self.weekly_data['long_covid_risk'].mean()
         avg_strain = self.weekly_data['current_strain'].mean()
 
-        avg_aor_adjustment = self.weekly_data['aor_adjustment'].mean()
+        #avg_aor_adjustment = self.weekly_data['aor_adjustment'].mean()
+        avg_covid_risk_adjustment = self.weekly_data['covid_risk_adjustment'].mean()
         avg_vaccination_adjustment = self.weekly_data['vaccination_adjustment'].mean()
         avg_strain_adjustment = self.weekly_data['strain_adjustment'].mean()
 
@@ -289,7 +313,8 @@ class Simulation:
             'average_vaccinations': avg_vaccinations,
             'average_long_covid_risk': avg_long_covid_risk,
             'average_strain': avg_strain,
-            'average_aor_adjustment': avg_aor_adjustment,
+            #'average_aor_adjustment': avg_aor_adjustment,
+            'average_covid_risk_adjustment': avg_covid_risk_adjustment,
             'average_vaccination_adjustment': avg_vaccination_adjustment,
             'average_strain_adjustment': avg_strain_adjustment,
             'vaccinations_0': vac_count_0,

@@ -18,7 +18,7 @@ param_descriptions = {
 }
 
 default_params = {
-    'size': int(round(330_000_000 / 30_000)),
+    'size': 330_000_000,
     'baseline_risk': sq.beta(20*0.15, 20*(1-0.15)), 
     'infection_rate': (sq.to(6687391, 40968288) / 330_000_000) / 52,
     'strain_reduction_factor': 0, 
@@ -33,7 +33,8 @@ default_params = {
     'p_never_vaccinated': 0.2,
     'p_two_shots': 0.5,
     'p_boosted_yearly': 0.3,
-    'aor_value': sq.beta(100*0.72, 100*(1-0.72))
+    'aor_value': sq.beta(100*0.72, 100*(1-0.72)),
+    'covid_risk_reduction_factor': 0.7
     # Default values for other parameters
 }
 

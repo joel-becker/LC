@@ -1,6 +1,6 @@
 from utils.process_daly_adjustments import DalyDataProcessor
 from utils.process_symptom_prevalence import SymptomPrevalenceDataProcessor
-from utils.estimate_symptom_prevalence_decay import SymptomPrevalenceEstimator
+from utils.estimate_symptom_prevalence_decay import SymptomPrevalenceEstimator, PiecewiseConstantIntegralEstimator
 import utils.parameters as params
 from utils.simulate_long_covid_cases import LongCovidSimulator
 from utils.merge_data_with_simulations import DataSimulationsMerger
@@ -17,6 +17,10 @@ logging.basicConfig(filename='data_processing.log', level=logging.INFO, format='
 logging.info('Data processing started.')
 
 def main():
+    years = 10
+    n_simulations = 300
+    population_size_deflator = 30_000
+
     # Setup logging
     logging.basicConfig(filename='data_processing.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
     logging.info('Data processing started.')
@@ -26,17 +30,14 @@ def main():
     data_daly = ddp.process_data()
 
     spdp = SymptomPrevalenceDataProcessor('data/prevalence_and_symptoms.csv')
-    data_symptom_prevalence = spdp.process_data(adjustment_method='conservative')
+    data_symptom_prevalence = spdp.process_data()
 
     # Estimation
     try:
-        spe = SymptomPrevalenceEstimator(data_symptom_prevalence)
-        spe.trace = spe.setup_and_sample_model()
-        df_symptom_integrals = spe.calculate_symptom_integrals()
+        spe = PiecewiseConstantIntegralEstimator(data_symptom_prevalence, num_draws = int(round(330_000_000 / population_size_deflator)))
+        normalized_integrals_df = spe.calculate_normalized_piecewise_constant_integrals_with_uncertainty()    
+        df_symptom_integrals = normalized_integrals_df
 
-        if spe.trace is not None:
-            with open('temp/trace.pkl', 'wb') as f:
-                pickle.dump(spe.trace, f)
         if df_symptom_integrals is not None:
             with open('temp/df_symptom_integrals.pkl', 'wb') as f:
                 pickle.dump(df_symptom_integrals, f)
@@ -49,7 +50,7 @@ def main():
     try:
         comparison_table = params.generate_comparison_table(
             params.default_params, 
-            params.pessimistic_params, 
+            params.robustness_params, 
             params.param_descriptions
             )
         with open('output/tables/parameters.txt', 'w') as f:
@@ -63,11 +64,15 @@ def main():
     except Exception as e:
         logging.error('Error generating comparison table: %s', e)
     try:
+        # Modify population size for speed
+        params.default_params['size'] = int(round(params.default_params['size'] / population_size_deflator))
+
+        # Run the simulation
         save_path = 'temp/results.pkl'
         lcs = LongCovidSimulator(
             params=params.default_params, 
-            years=5, 
-            n_simulations=30, 
+            years=years, 
+            n_simulations=n_simulations, 
             verbose=False,
             save_path=save_path
             )
@@ -91,7 +96,6 @@ def main():
         # Calculate and log time per simulation-year
         time_per_simulation_year = total_time / (lcs.years * lcs.n_simulations)
         logging.info('Time per simulation-year: %f seconds', time_per_simulation_year)
-
     except Exception as e:  # Modified to catch and log the exception properly
         logging.error('Error running simulations: %s', e)
 
@@ -115,26 +119,31 @@ def main():
         ) # Symptom prevalence, decay over time
     plots.plot_symptom_years_histograms(df_symptom_integrals, num_subplots=3) # Symptom prevalence, total years
     # # Internal simulation outcomes over time
-    plots.plot_daly_loss_over_time(df_merged) # Total welfare loss, over time
+    plots.plot_daly_loss_over_time(df_merged, population_size_deflator) # Total welfare loss, over time
 
     # Robustness checks
     try:
         for param_name, param_values in params.robustness_params.items():
             for param_value in param_values:
+                logging.info('Running robustness check for parameter %s with value %s', param_name, param_value)
+
                 # Create a copy of the default parameters
-                params = params.default_params.copy()
+                params_copy = params.default_params.copy()
                 
                 # Update the specific parameter value
-                params[param_name] = param_value
+                params_copy[param_name] = param_value
+
+                # Modify population size for speed
+                params_copy['size'] = int(round(params_copy['size'] / population_size_deflator))
                 
                 # Create a unique save path for each parameter configuration
                 save_path = f"output/tables/{param_name}_{param_value}.csv"
                 
                 # Run the simulation with the updated parameters
                 lcs = LongCovidSimulator(
-                    params=params, 
-                    years=5, 
-                    n_simulations=30, 
+                    params=params_copy, 
+                    years=3, 
+                    n_simulations=100, 
                     verbose=False,
                     save_path=save_path
                 )
