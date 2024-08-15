@@ -14,11 +14,9 @@ class Population:
                 'total_strains': 10, 
                 'current_strain': 1, 
                 'strain_decay': 50,
-                'initial_vaccination_distribution': {0: 0.2, 1: 0.2, 2: 0.3, 3:0.2, 4:0.1},
                 'vaccination_reduction': sq.beta(100*0.25, 100*(1-0.25)), 
                 'vaccination_interval': 180, 
                 'vaccination_effectiveness_halflife': 1/365, 
-                'vaccination_hazard_rate': sq.beta(1000*0.01, 1000*(1-0.01)),
                 #'aor_value': sq.beta(100*0.72, 100*(1-0.72)),
                 'covid_risk_reduction_factor': 0.7
             },
@@ -36,11 +34,9 @@ class Population:
         self.strain_reduction_factor = param_values['strain_reduction_factor']
         self.current_strain = param_values['current_strain']
         self.strain_decay = param_values['strain_decay']
-        self.initial_vaccination_distribution = param_values['initial_vaccination_distribution']
         self.vaccination_reduction = param_values['vaccination_reduction']
         self.vaccination_interval = param_values['vaccination_interval']
         self.vaccination_effectiveness_halflife = param_values['vaccination_effectiveness_halflife']
-        self.vaccination_hazard_rate = param_values['vaccination_hazard_rate']
         #self.aor_value = param_values['aor_value']
         self.covid_risk_reduction_factor = param_values['covid_risk_reduction_factor']
     

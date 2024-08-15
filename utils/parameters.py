@@ -13,7 +13,6 @@ param_descriptions = {
     'vaccination_reduction': 'Peak effectiveness of vaccination (against Long COVID, conditional on COVID)', 
     'vaccination_interval': 'Minimum interval between vaccinations', 
     'vaccination_effectiveness_halflife': 'Half-life of vaccination effectiveness', 
-    'vaccination_hazard_rate': 'Hazard rate of receiving vaccination',
     'aor_value': 'AOR value'
 }
 
@@ -25,11 +24,9 @@ default_params = {
     'total_strains': 10, 
     'current_strain': 1, 
     'strain_decay': 50,
-    'initial_vaccination_distribution': {0: 0.2, 1: 0.2, 2: 0.3, 3:0.2, 4:0.1},
     'vaccination_reduction': sq.beta(100*0.25, 100*(1-0.25)), 
     'vaccination_interval': 180, 
     'vaccination_effectiveness_halflife': sq.norm(mean=148, sd=50), 
-    'vaccination_hazard_rate': sq.beta(1000*0.01, 1000*(1-0.01)),
     'p_never_vaccinated': 0.2,
     'p_two_shots': 0.5,
     'p_boosted_yearly': 0.3,
