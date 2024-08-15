@@ -41,6 +41,9 @@ default_params = {
 robustness_params = {
     'baseline_risk': [0.1, 0.15, 0.2],
     'infection_rate': [0.01, 0.03, 0.05],
+    'vaccination_reduction': [0.15, 0.25, 0.35],
+    'vaccination_effectiveness_halflife': [75, 148, 300],
+    'aor_value': [0.6, 0.72, 0.85]
 }
 
 def merge_and_describe_parameters(default_params, scenario_params, descriptions):
