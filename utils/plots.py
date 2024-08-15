@@ -3,19 +3,55 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 
-def plot_daly_loss_over_time(df):
+def plot_daly_loss_over_time(df, population_size_deflator):
     # Convert 'DALY_loss' to numeric, coercing any errors to NaN
     df['DALY_loss'] = pd.to_numeric(df['DALY_loss'], errors='coerce')
 
-    # Separate data by simulation and aggregate
+    # Complete index of weeks
+    #start_date = df['week_start'].min() 
+    #end_date = df['week_start'].max()
+    #all_weeks = pd.date_range(start=start_date, end=end_date, freq='W-SUN')
+
+
+    date_range = pd.date_range(start=df['week_start'].min(), end=df['week_start'].max(), freq='W-THU')
+    all_dates = pd.DataFrame(date_range, columns=['week_start'])
+    simulations = df['simulation'].unique()
+    all_combinations = pd.MultiIndex.from_product([date_range, simulations], names=['week_start', 'simulation'])
+    complete_data = pd.DataFrame(index=all_combinations).reset_index()
     aggregated_data = (
         df.groupby(['week_start', 'simulation'])
-            .agg({'has_long_covid': 'sum', 'DALY_loss': 'sum'})
-            .sort_values(by=['simulation', 'week_start'])
-            .groupby('simulation')
-            .cumsum(numeric_only=True)
-            .reset_index()
-        )
+        .agg({'has_long_covid': 'sum', 'DALY_loss': 'sum'})
+        .sort_values(by=['simulation', 'week_start'])
+        .groupby('simulation')
+        .cumsum(numeric_only=True)
+        .reset_index()
+        #.merge(complete_data, on=['week_start', 'simulation'], how='right')
+        #.sort_values(by=['simulation', 'week_start'])
+    )
+    #aggregated_data.fillna(method='ffill', inplace=True)
+    #aggregated_data.fillna(0, inplace=True)
+
+    aggregated_data['has_long_covid'] = aggregated_data['has_long_covid'] * population_size_deflator
+    aggregated_data['DALY_loss'] = aggregated_data['DALY_loss'] * population_size_deflator
+    ## Separate data by simulation and aggregate
+    #aggregated_data = (
+    #    df.groupby(['week_start', 'simulation'])
+    #        .agg({'has_long_covid': 'sum', 'DALY_loss': 'sum'})
+    #        .sort_values(by=['simulation', 'week_start'])
+    #        #.groupby('simulation')
+    #        #.cumsum(numeric_only=True)
+    #        #.reset_index()
+    #    )
+#
+    ## Reset index to prepare for reindexing
+    #aggregated_data = aggregated_data.reset_index()
+    #
+    ## Set the new index and unstack simulations to columns
+    #aggregated_data.set_index(['week_start', 'simulation'], inplace=True)
+    #aggregated_data = aggregated_data.unstack(level='simulation')
+    #
+    ## Reindex the DataFrame to include all weeks, filling missing weeks
+    #aggregated_data = aggregated_data.reindex(all_weeks, method='ffill')
 
     # Calculate mean for each period
     mean_data = aggregated_data.groupby('week_start').mean().reset_index()
@@ -189,3 +225,265 @@ def plot_all_symptoms(trace, symptoms, time_points):
     plt.suptitle('Decay of Symptoms Prevalence Over Time')
     plt.tight_layout(rect=[0, 0, 1, 0.97])
     plt.savefig('output/plots/symptom_decay.png')
+
+import os
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+import numpy as np
+
+def plot_parameter_distributions(base_path):
+    # Configure the aesthetics for seaborn plots
+    sns.set(style="whitegrid")
+    
+    # Prepare to collect aggregated data
+    total_daly_loss_by_file = []
+    
+    # List files in the directory
+    for filename in os.listdir(base_path):
+        if filename.endswith(".csv") and "parameters" not in filename:
+            # Construct file path
+            file_path = os.path.join(base_path, filename)
+            # Read the data
+            df = pd.read_csv(file_path)
+            # Convert DALY_loss to numeric, handling errors
+            df['DALY_loss'] = pd.to_numeric(df['DALY_loss'], errors='coerce')
+            # Group by simulation and sum DALY_loss
+            total_daly_loss = df.groupby('simulation')['DALY_loss'].sum().reset_index()
+            # Extract parameter name and value from filename
+            param_name_value = filename.split('_')
+            param_name = '_'.join(param_name_value[:-1])  # Join all but the last part
+            param_value = param_name_value[-1].replace('.csv', '')  # Remove the file extension
+            total_daly_loss['Parameter'] = param_name
+            total_daly_loss['Value'] = param_value
+            total_daly_loss_by_file.append(total_daly_loss)
+    
+    # Combine all data frames
+    combined_data = pd.concat(total_daly_loss_by_file)
+    
+    # Plot settings
+    plt.figure(figsize=(12, 8))
+    
+    # Group data by the parameter to create subplots
+    parameters = combined_data['Parameter'].unique()
+    for i, param in enumerate(sorted(parameters)):
+        ax = plt.subplot(len(parameters), 1, i + 1)
+        
+        # Filter data by parameter
+        param_data = combined_data[combined_data['Parameter'] == param]
+        
+        # Sort values for coloring
+        order = sorted(param_data['Value'].unique(), key=float)  # Sorting numerically
+        palette = sns.color_palette("coolwarm", n_colors=len(order))
+        
+        # Draw the distribution plots
+        sns.histplot(data=param_data, x="DALY_loss", hue="Value", element="step", fill=True,
+                     palette=palette, common_norm=False, ax=ax, kde=True)
+        
+        # Aesthetics
+        ax.set_title(f'Distribution of Total DALY_loss for {param}')
+        ax.set_ylabel('Density')
+        if i < len(parameters) - 1:
+            ax.set_xlabel('')
+
+    plt.tight_layout()
+    plt.show()
+
+# Usage
+base_path = 'output/tables'  # Directory containing the CSV files
+#plot_parameter_distributions(base_path)
+
+
+import os
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+import numpy as np
+
+def plot_parameter_distributions(base_path, population_size_deflator=30_000):
+    # Configure the aesthetics for seaborn plots
+    sns.set(style="whitegrid")
+    
+    # Prepare to collect aggregated data
+    total_daly_loss_by_file = []
+    
+    # List files in the directory
+    for filename in os.listdir(base_path):
+        if filename.endswith(".csv") and "parameters" not in filename:
+            # Construct file path
+            file_path = os.path.join(base_path, filename)
+            # Read the data
+            df = pd.read_csv(file_path)
+            # Convert DALY_loss to numeric, handling errors
+            df['DALY_loss'] = pd.to_numeric(df['DALY_loss'], errors='coerce') * population_size_deflator
+            # Group by simulation and sum DALY_loss
+            total_daly_loss = df.groupby('simulation')['DALY_loss'].sum().reset_index()
+            # Extract parameter name and value from filename
+            param_info = filename.replace('.csv', '').split('_')
+            param_name = param_info[0]
+            param_value = param_info[2]  # Assuming the value is the third part after splitting
+            total_daly_loss['Parameter'] = param_name
+            total_daly_loss['Value'] = float(param_value)
+            total_daly_loss_by_file.append(total_daly_loss)
+    
+    # Combine all data frames
+    combined_data = pd.concat(total_daly_loss_by_file)
+    
+    # Plot settings
+    plt.figure(figsize=(12, 8))
+    
+    # Group data by the parameter to create subplots
+    parameters = combined_data['Parameter'].unique()
+    for i, param in enumerate(sorted(parameters)):
+        ax = plt.subplot(len(parameters), 1, i + 1)
+        
+        # Filter data by parameter
+        param_data = combined_data[combined_data['Parameter'] == param]
+        
+        # Sort values for coloring and legend ordering
+        sorted_values = sorted(param_data['Value'].unique(), key=float)  # Sorting numerically
+        palette = ['green', 'orange', 'red'][:len(sorted_values)]
+        
+        # Draw the distribution plots
+        sns.histplot(data=param_data, x="DALY_loss", hue="Value", element="step", fill=True,
+                     palette=palette, common_norm=False, ax=ax, kde=True, hue_order=sorted_values)
+        
+        # Aesthetics
+        ax.set_ylabel(param)
+        ax.set_title('')  # Remove subplot title
+        if i < len(parameters) - 1:
+            ax.set_xlabel('')
+
+    plt.tight_layout()
+    plt.show()
+import os
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+from matplotlib.ticker import StrMethodFormatter
+
+def plot_parameter_distributions(base_path, population_size_deflator=30_000, years=2, use_symlog=False, linthresh=1000):
+    sns.set(style="whitegrid")
+    
+    total_daly_loss_by_file = []
+    
+    for filename in os.listdir(base_path):
+        if filename.endswith(".csv") and "parameters" not in filename:
+            file_path = os.path.join(base_path, filename)
+            df = pd.read_csv(file_path)
+            df['DALY_loss'] = pd.to_numeric(df['DALY_loss'], errors='coerce') * (population_size_deflator / years)
+            total_daly_loss = df.groupby('simulation')['DALY_loss'].sum().reset_index()
+            
+            param_info = filename.replace('.csv', '').split('_')
+            param_name = param_info[0] + '_' + param_info[1]
+            param_value = param_info[2]
+            
+            total_daly_loss['Parameter'] = param_name
+            total_daly_loss['Value'] = float(param_value)
+            total_daly_loss_by_file.append(total_daly_loss)
+    
+    combined_data = pd.concat(total_daly_loss_by_file)
+    plt.figure(figsize=(12, 8))
+    
+    parameters = combined_data['Parameter'].unique()
+    global_max = combined_data['DALY_loss'].max()
+    
+    for i, param in enumerate(sorted(parameters)):
+        ax = plt.subplot(len(parameters), 1, i + 1)
+        
+        param_data = combined_data[combined_data['Parameter'] == param]
+        sorted_values = sorted(param_data['Value'].unique(), key=float)
+        palette = ['green', 'orange', 'red'][:len(sorted_values)]
+        
+        sns.histplot(data=param_data, x="DALY_loss", hue="Value", element="step", fill=True,
+                     palette=palette, common_norm=False, ax=ax, kde=True, hue_order=sorted_values)
+        
+        ax.set_xlim(left=linthresh, right=global_max)
+        ax.set_ylabel(param)
+        ax.grid(False, axis='y')
+        ax.xaxis.set_major_formatter(StrMethodFormatter('{x:,.0f}'))  # Format x-axis with commas
+        
+        if use_symlog:
+            ax.set_xscale('symlog', linthresh=linthresh)  # Set x-axis to symmetrical logarithmic scale
+
+        if i < len(parameters) - 1:
+            ax.set_xlabel('')
+
+    plt.tight_layout()
+    plt.savefig('output/plots/robustness_distribution.png')
+
+# Usage
+base_path = 'output/tables'  # Directory containing the CSV files
+#plot_parameter_distributions(base_path)
+
+import os
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+def plot_tornado_diagram(base_path, population_size_deflator=30_000, years=2):
+    sns.set(style="whitegrid")
+
+    results = []
+
+    for filename in os.listdir(base_path):
+        if filename.endswith(".csv") and "parameters" not in filename:
+            file_path = os.path.join(base_path, filename)
+            df = pd.read_csv(file_path)
+            df['Adjusted_DALY_loss'] = pd.to_numeric(df['DALY_loss'], errors='coerce') * (population_size_deflator / years)
+            
+            # Assume that 'simulation' uniquely identifies a scenario
+            total_daly_loss = df.groupby('simulation')['Adjusted_DALY_loss'].sum().reset_index()
+
+            param_info = filename.replace('.csv', '').split('_')
+            param_name = param_info[0] + '_' + param_info[1]
+            param_value = param_info[2]
+
+            # Record parameter, value, and total DALY loss
+            for index, row in total_daly_loss.iterrows():
+                results.append({'Parameter': param_name, 'Value': float(param_value), 'DALY_loss': row['Adjusted_DALY_loss'], 'Simulation': row['simulation']})
+
+    # Create DataFrame from results
+    df_results = pd.concat([pd.DataFrame([i]) for i in results], ignore_index=True)
+    
+    # Calculate mean DALY_loss for each parameter-value pair
+    mean_daly_losses = df_results.groupby(['Parameter', 'Value'])['DALY_loss'].mean().reset_index()
+
+    # Determine baseline values - assuming it's the median of values for simplicity
+    baseline_values = mean_daly_losses.groupby('Parameter')['Value'].median().reset_index()
+    baseline_values = baseline_values.rename(columns={'Value': 'Baseline_Value'})
+
+    # Merge to find baseline DALY_loss
+    mean_daly_losses = mean_daly_losses.merge(baseline_values, on='Parameter', how='left')
+    baseline_daly = mean_daly_losses[mean_daly_losses['Value'] == mean_daly_losses['Baseline_Value']]
+    baseline_daly = baseline_daly.rename(columns={'DALY_loss': 'Baseline_DALY'})
+
+    # Calculate deviations from baseline
+    mean_daly_losses['Delta'] = mean_daly_losses.apply(lambda row: row['DALY_loss'] - baseline_daly[baseline_daly['Parameter'] == row['Parameter']]['Baseline_DALY'].values[0], axis=1)
+
+    # Plotting
+    plt.figure(figsize=(10, 6))
+    for param in parameters:
+        param_data = mean_daly_losses[mean_daly_losses['Parameter'] == param]
+        for _, row in param_data.iterrows():
+            # Determine the starting point of the bar
+            if row['Delta'] < 0:
+                # Start from the negative value and extend to 0
+                bar_start = row['Delta']
+            else:
+                # Start from 0 and extend to the positive value
+                bar_start = 0
+            # Determine the color of the bar
+            color = 'red' if row['Delta'] > 0 else 'green'
+            # Plot the bar
+            plt.barh(param, abs(row['Delta']), color=color, left=bar_start, align='center')
+
+    plt.xlabel('Change in DALY_loss')
+    plt.title('Tornado Diagram of Parameter Impact')
+    plt.axvline(x=0, color='blue', linestyle='--')  # Line for baseline
+    plt.grid(True, axis='x')
+    plt.show()
+
+# Usage
+base_path = 'output/tables'  # Directory containing the CSV files
+#plot_tornado_diagram(base_path)
