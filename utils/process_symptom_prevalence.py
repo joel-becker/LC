@@ -165,6 +165,7 @@ class SymptomPrevalenceDataAdjuster:
         else:
             return row['prevalence_diff_18m']
         
+
 class SymptomPrevalenceDataProcessor:
     def __init__(self, file_path):
         """
@@ -193,6 +194,7 @@ class SymptomPrevalenceDataProcessor:
 
         return adjusted_data
 
+
 class SymptomPrevalenceDataAdjuster:
     def __init__(self, prevalence_data):
         """
@@ -212,6 +214,7 @@ class SymptomPrevalenceDataAdjuster:
         """
         adjusted_data = self.prevalence_data.copy()
         adjusted_data['steady_state_value'] = adjusted_data.apply(self._determine_steady_state, axis=1)
+        adjusted_data['previous_prevalence_diff_18m'] = adjusted_data['prevalence_diff_18m']
         adjusted_data['prevalence_diff_18m'] = adjusted_data['steady_state_value']
         return adjusted_data
 
@@ -236,6 +239,8 @@ class SymptomPrevalenceDataAdjuster:
             return (row['prevalence_diff_6m'] + row['prevalence_diff_12m'] + row['prevalence_diff_18m']) / 3
         else:
             return row['prevalence_diff_18m']
+
+
 class SymptomPrevalenceDataProcessor:
     def __init__(self, file_path):
         """

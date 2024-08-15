@@ -16,9 +16,10 @@ logging.basicConfig(filename='data_processing.log', level=logging.INFO, format='
 
 logging.info('Data processing started.')
 
+
 def main():
-    years = 10
-    n_simulations = 300
+    years = 5
+    n_simulations = 10
     population_size_deflator = 30_000
 
     # Setup logging
@@ -63,6 +64,7 @@ def main():
                 f.write(row_str + '\n')
     except Exception as e:
         logging.error('Error generating comparison table: %s', e)
+
     try:
         # Modify population size for speed
         params.default_params['size'] = int(round(params.default_params['size'] / population_size_deflator))
