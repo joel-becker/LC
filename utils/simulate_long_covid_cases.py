@@ -37,7 +37,6 @@ class Population:
         self.vaccination_reduction = param_values['vaccination_reduction']
         self.vaccination_interval = param_values['vaccination_interval']
         self.vaccination_effectiveness_halflife = param_values['vaccination_effectiveness_halflife']
-        #self.aor_value = param_values['aor_value']
         self.covid_risk_reduction_factor = param_values['covid_risk_reduction_factor']
     
         # Assign vaccination types
@@ -117,8 +116,6 @@ class Population:
                 self.data.loc[assigned_strain, 'current_strain'] = strain
 
     def calculate_long_covid_risk(self, week_data):
-        #aor_adjustment = self.calculate_aor_adjustment()
-    
         # Calculate the COVID risk adjustment based on the number of years passed
         years_passed = (week_data['week_start'] - self.current_date).days // 365
         covid_risk_adjustment = self.covid_risk_reduction_factor ** years_passed
@@ -138,8 +135,6 @@ class Population:
             strain_adjustment = 1
         else:
             strain_adjustment = self.calculate_strain_adjustment()
-
-        #self.data['aor_adjustment'] = aor_adjustment
     
         # Add this line
         self.data['covid_risk_adjustment'] = covid_risk_adjustment
@@ -150,9 +145,6 @@ class Population:
         # Multiply the baseline risk by the COVID risk adjustment
         adjusted_risk = self.baseline_risk * covid_risk_adjustment * vaccination_adjustment * strain_adjustment
         self.data['long_covid_risk'] = adjusted_risk
-
-        #adjusted_risk = self.baseline_risk * aor_adjustment * vaccination_adjustment * strain_adjustment
-        #self.data['long_covid_risk'] = adjusted_risk
 
         # Determine Long COVID cases
         current_infections = self.data['last_infection_date'] == week_data['week_start']
@@ -173,25 +165,6 @@ class Population:
         self.data['has_long_covid'] = False
         self.data['current_strain'] = pd.NA
         
-    #def calculate_aor_adjustment(self):
-    #    # Ensure infection_counts is an integer array for correct iteration
-    #    infection_counts = self.data['covid_infections'] - 1 # Subtract 1 to exclude current infection
-    #    infection_counts = infection_counts.astype(int)
-    #
-    #    # Initialize the adjusted risk with the baseline risk
-    #    adjusted_risk = np.full_like(infection_counts, self.baseline_risk, dtype=float)
-    #
-    #    # Iteratively apply the aOR adjustment for each subsequent infection
-    #    for i in range(1, infection_counts.max() + 1):
-    #        is_ith_infection = infection_counts >= i
-    #        p2 = adjusted_risk * self.aor_value / (1 + adjusted_risk * (self.aor_value - 1))
-    #        adjusted_risk[is_ith_infection] = p2[is_ith_infection]
-    #
-    #    # Calculate multiplicative adjustment
-    #    aor_adjustment = adjusted_risk / self.baseline_risk
-    #
-    #    return aor_adjustment
-        
     def calculate_vaccination_adjustment(self, week_data):
         # Initialize adjustment array with 1 (no reduction in risk)
         vaccination_adjustment = np.ones(self.size)
@@ -207,22 +180,6 @@ class Population:
         # Calculate adjustment for individuals with 'boosted_yearly'
         boosted_yearly_mask = self.data['vaccination_type'] == 'boosted_yearly'
         vaccination_adjustment[boosted_yearly_mask] = 1 - self.vaccination_reduction
-
-        #last_vaccination_dates = self.data['last_vaccination_date']
-        #time_since_vaccination = (week_data['week_start'] - last_vaccination_dates).dt.days
-        #
-        ## Initialize adjustment array with 1 (no reduction in risk)
-        #vaccination_adjustment = np.ones(self.size)
-        #
-        ## Identify vaccinated individuals
-        #vaccinated = self.data['vaccination_count'] > 0
-        #
-        ## Calculate vaccination effectiveness for vaccinated individuals
-        #vaccination_decayrate = np.log(2) / self.vaccination_effectiveness_halflife
-        #vaccination_effectiveness = np.exp(
-        #    -vaccination_decayrate * time_since_vaccination[vaccinated]
-        #    ) * self.vaccination_reduction
-        #vaccination_adjustment[vaccinated] = 1 - vaccination_effectiveness
 
         return vaccination_adjustment
 
