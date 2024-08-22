@@ -45,6 +45,7 @@ class Population:
         self.data = pd.DataFrame({
             'individual_id': range(self.size),
             'covid_infections': np.zeros(self.size),
+            'last_infection_date': pd.to_datetime([self.current_date] * self.size),
             'last_vaccination_date': np.full(self.size, self.current_date - pd.Timedelta(days=self.vaccination_interval)),
             'vaccination_type': np.random.choice(vaccination_types, size=self.size, p=vaccination_type_probabilities),
             'long_covid_risk': np.full(self.size, self.baseline_risk),
@@ -126,7 +127,6 @@ class Simulation:
 
     def simulate_week(self, week_data):
         self.population.reset_long_covid_status()
-        self.population.update_infection_status(week_data)
         self.population.calculate_long_covid_risk(week_data)
         self.record_weekly_statistics(week_data)
 

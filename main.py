@@ -19,8 +19,8 @@ logging.info('Data processing started.')
 
 def main():
     years = 20
-    n_simulations = 100
-    population_size_deflator = 30_000
+    n_simulations = 3
+    population_size_deflator = 300_000
 
     # Setup logging
     logging.basicConfig(filename='data_processing.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
