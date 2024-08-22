@@ -18,19 +18,14 @@ param_descriptions = {
 
 default_params = {
     'size': 330_000_000,
-    'baseline_risk': sq.beta(20*0.15, 20*(1-0.15)), 
+    'baseline_risk': sq.beta(100*0.15, 100*(1-0.15)), 
     'infection_rate': (sq.to(6687391, 40968288) / 330_000_000) / 52,
-    'strain_reduction_factor': 0, 
-    'total_strains': 10, 
-    'current_strain': 1, 
-    'strain_decay': 50,
     'vaccination_reduction': sq.beta(100*0.25, 100*(1-0.25)), 
     'vaccination_interval': 180, 
-    'vaccination_effectiveness_halflife': sq.norm(mean=148, sd=50), 
+    'vaccination_effectiveness_halflife': sq.norm(mean=148, sd=30), 
     'p_never_vaccinated': 0.2,
     'p_two_shots': 0.5,
     'p_boosted_yearly': 0.3,
-    'aor_value': sq.beta(100*0.72, 100*(1-0.72)),
     'covid_risk_reduction_factor': 0.7
     # Default values for other parameters
 }
