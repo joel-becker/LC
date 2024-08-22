@@ -115,13 +115,13 @@ def main():
         logging.error('Error merging data: %s', e)
 
     # Tables and plots
-    plots.plot_daly_adjustments(data_daly) # DALYs per symptom
-    #plots.plot_all_symptoms(
-    #    spe.trace, data_symptom_prevalence['symptom'].unique().tolist(), time_points=np.linspace(0, 18, 100)
-    #    ) # Symptom prevalence, decay over time
+    # # DALY adjustments per symptom
+    plots.plot_daly_adjustments(data_daly)
+
+    # # Symptom prevalence over time
     plots.plot_symptom_prevalence_over_time(data_symptom_prevalence, "output/plots/symptom_prevalence_over_time.png")
-    #plots.plot_symptom_years_histograms(df_symptom_integrals, num_subplots=3) # Symptom prevalence, total years
-    # # Internal simulation outcomes over time
+
+    # # Simulate LC and burden over time
     plots.plot_daly_loss_over_time(df_merged, population_size_deflator, "output/plots/daly_loss_over_time.png") # Total welfare loss, over time
 
     # Robustness checks
@@ -137,7 +137,7 @@ def main():
                 params_copy[param_name] = param_value
 
                 # Modify population size for speed
-                params_copy['size'] = int(round(params_copy['size'] / population_size_deflator))
+                #params_copy['size'] = int(round(params_copy['size'] / population_size_deflator))
                 
                 # Create a unique save path for each parameter configuration
                 save_path = f"output/tables/robustness/{param_name}_{param_value}.csv"
@@ -146,7 +146,7 @@ def main():
                 lcs = LongCovidSimulator(
                     params=params_copy, 
                     years=years, 
-                    n_simulations=int(n_simulations/3), 
+                    n_simulations=n_simulations, 
                     verbose=False,
                     save_path=save_path
                 )
