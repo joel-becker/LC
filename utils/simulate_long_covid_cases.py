@@ -10,14 +10,9 @@ class Population:
                 'size': 330_000, 
                 'baseline_risk': sq.norm(mean = 0.15, sd = 0.01), 
                 'infection_rate': (sq.to(6687391, 40968288) / 330_000_000) / 52,
-                'strain_reduction_factor': sq.norm(mean=0.6, sd=0.1), 
-                'total_strains': 10, 
-                'current_strain': 1, 
-                'strain_decay': 50,
                 'vaccination_reduction': sq.beta(100*0.25, 100*(1-0.25)), 
                 'vaccination_interval': 180, 
                 'vaccination_effectiveness_halflife': 1/365, 
-                #'aor_value': sq.beta(100*0.72, 100*(1-0.72)),
                 'covid_risk_reduction_factor': 0.7
             },
             verbose=True
@@ -30,10 +25,6 @@ class Population:
         self.size = param_values['size']
         self.baseline_risk = param_values['baseline_risk']
         self.infection_rate = param_values['infection_rate']
-        self.total_strains = param_values['total_strains']
-        self.strain_reduction_factor = param_values['strain_reduction_factor']
-        self.current_strain = param_values['current_strain']
-        self.strain_decay = param_values['strain_decay']
         self.vaccination_reduction = param_values['vaccination_reduction']
         self.vaccination_interval = param_values['vaccination_interval']
         self.vaccination_effectiveness_halflife = param_values['vaccination_effectiveness_halflife']
@@ -56,7 +47,6 @@ class Population:
             'covid_infections': np.zeros(self.size),
             'last_vaccination_date': np.full(self.size, self.current_date - pd.Timedelta(days=self.vaccination_interval)),
             'vaccination_type': np.random.choice(vaccination_types, size=self.size, p=vaccination_type_probabilities),
-            'current_strain': pd.Series([pd.NA] * self.size),
             'long_covid_risk': np.full(self.size, self.baseline_risk),
             'has_long_covid': np.zeros(self.size, dtype=bool)
         })
@@ -74,47 +64,6 @@ class Population:
                 param_values[key] = value
         return param_values
     
-
-    def get_strain_distribution(self, week_data):
-        """
-        Generate a distribution of COVID strains based on the time distance from the start date.
-
-        :return: A dictionary representing the distribution of strains.
-        """
-        # Immediately return a default distribution if strain_reduction_factor is 0
-        if self.strain_reduction_factor == 0:
-            return {0: 1.0}
-        
-        # Calculate the number of weeks since the start of the simulation
-        weeks_since_start = (week_data['week_start'] - self.current_date).days // 7
-
-        # Generate a distribution that shifts towards later strains over time
-        strain_distribution = np.zeros(self.total_strains)
-        for strain in range(1, self.total_strains):
-            # This is a simplistic model where each strain becomes more likely as time passes
-            strain_distribution[strain] = np.exp(-np.abs(weeks_since_start - self.strain_decay * strain))
-
-        # Normalize the distribution so it sums to 1
-        strain_distribution /= strain_distribution.sum()
-
-        # Convert to dictionary
-        strain_distribution_dict = {strain: prob for strain, prob in enumerate(strain_distribution)}
-
-        return strain_distribution_dict
-
-    def update_infection_status(self, week_data):
-        new_infections = np.random.rand(self.size) < self.infection_rate
-        self.data.loc[new_infections, 'covid_infections'] += 1
-        self.data.loc[new_infections, 'last_infection_date'] = week_data['week_start']
-
-        # Skip strain assignment if strain_reduction_factor is 0
-        if self.strain_reduction_factor != 0:
-            # Else assign strains based on the distribution
-            strain_distribution = self.get_strain_distribution(week_data)
-            for strain, proportion in strain_distribution.items():
-                assigned_strain = new_infections & (np.random.rand(self.size) < proportion)
-                self.data.loc[assigned_strain, 'current_strain'] = strain
-
     def calculate_long_covid_risk(self, week_data):
         # Calculate the COVID risk adjustment based on the number of years passed
         years_passed = (week_data['week_start'] - self.current_date).days // 365
@@ -122,28 +71,13 @@ class Population:
 
         vaccination_adjustment = self.calculate_vaccination_adjustment(week_data)
 
-        # Set strain_adjustment to 1 directly if strain_reduction_factor is 0
-        if self.strain_reduction_factor == 0:
-            strain_adjustment = 1
-        else:
-            strain_adjustment = self.calculate_strain_adjustment()
-
-            vaccination_adjustment = self.calculate_vaccination_adjustment(week_data)
-        
-        # Set strain_adjustment to 1 directly if strain_reduction_factor is 0
-        if self.strain_reduction_factor == 0:
-            strain_adjustment = 1
-        else:
-            strain_adjustment = self.calculate_strain_adjustment()
-    
         # Add this line
         self.data['covid_risk_adjustment'] = covid_risk_adjustment
 
         self.data['vaccination_adjustment'] = vaccination_adjustment
-        self.data['strain_adjustment'] = strain_adjustment
 
         # Multiply the baseline risk by the COVID risk adjustment
-        adjusted_risk = self.baseline_risk * covid_risk_adjustment * vaccination_adjustment * strain_adjustment
+        adjusted_risk = self.baseline_risk * covid_risk_adjustment * vaccination_adjustment
         self.data['long_covid_risk'] = adjusted_risk
 
         # Determine Long COVID cases
@@ -155,15 +89,11 @@ class Population:
             print(f"Current infections: {current_infections.sum()}")
             print(f"Adjusted risk: {adjusted_risk.mean()}")
             print(f"Adjusted risk (current infections): {self.data[current_infections]['long_covid_risk'].mean()}")
-            print(f"AOR adjustment (current infections): {self.data[current_infections]['aor_adjustment'].mean()}")
             print(f"Vaccination adjustment (current infections): {self.data[current_infections]['vaccination_adjustment'].mean()}")
-            print(f"Strain adjustment (current infections): {self.data[current_infections]['strain_adjustment'].mean()}")
-            print(f"Strain number (current infections): {self.data[current_infections]['current_strain'].mean()}")
             print(f"New long COVID cases: {new_long_covid_cases.sum()}")
 
     def reset_long_covid_status(self):
         self.data['has_long_covid'] = False
-        self.data['current_strain'] = pd.NA
         
     def calculate_vaccination_adjustment(self, week_data):
         # Initialize adjustment array with 1 (no reduction in risk)
@@ -182,12 +112,6 @@ class Population:
         vaccination_adjustment[boosted_yearly_mask] = 1 - self.vaccination_reduction
 
         return vaccination_adjustment
-
-    def calculate_strain_adjustment(self):
-        new_strain = self.data['current_strain']
-        # Assuming reduced risk for subsequent strains
-        strain_adjustment = (1 - self.strain_reduction_factor) ** (new_strain - 1)
-        return strain_adjustment
 
 
 class Simulation:
@@ -214,28 +138,21 @@ class Simulation:
     def record_weekly_statistics(self, week_data):
         weekly_cases = self.weekly_data['has_long_covid'].sum()
         avg_infections = self.weekly_data['covid_infections'].mean()
-        infection_distribution_by_strain = self.weekly_data.groupby('current_strain')['covid_infections'].count()
         avg_days_since_vaccination = (week_data['week_start'] - self.weekly_data['last_vaccination_date']).dt.days.mean()
         avg_long_covid_risk = self.weekly_data['long_covid_risk'].mean()
-        avg_strain = self.weekly_data['current_strain'].mean()
 
         #avg_aor_adjustment = self.weekly_data['aor_adjustment'].mean()
         avg_covid_risk_adjustment = self.weekly_data['covid_risk_adjustment'].mean()
         avg_vaccination_adjustment = self.weekly_data['vaccination_adjustment'].mean()
-        avg_strain_adjustment = self.weekly_data['strain_adjustment'].mean()
 
         self.weekly_summary.append({
             'week': week_data['week_start'],
             'new_long_covid_cases': weekly_cases,
             'average_infections': avg_infections,
-            'infection_distribution_by_strain': infection_distribution_by_strain.to_dict(),
             'average_days_since_last_vaccination': avg_days_since_vaccination,
             'average_long_covid_risk': avg_long_covid_risk,
-            'average_strain': avg_strain,
-            #'average_aor_adjustment': avg_aor_adjustment,
             'average_covid_risk_adjustment': avg_covid_risk_adjustment,
             'average_vaccination_adjustment': avg_vaccination_adjustment,
-            'average_strain_adjustment': avg_strain_adjustment,
         })
 
     def run(self, duration):
