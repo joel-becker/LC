@@ -18,8 +18,8 @@ logging.info('Data processing started.')
 
 
 def main():
-    years = 3
-    n_simulations = 3
+    years = 20
+    n_simulations = 30
     population_size_deflator = 30_000
 
     # Setup logging
