@@ -696,4 +696,4 @@ def plot_tornado_diagram(data_path,
     return fig, ax
 
 # Example usage:
-fig, ax = plot_tornado_diagram("output/tables/robustness", output_file="output/plots/robustness_tornado_diagram.png")
+# fig, ax = plot_tornado_diagram("output/tables/robustness", output_file="output/plots/robustness_tornado_diagram.png")

@@ -65,6 +65,11 @@ class Population:
                 param_values[key] = value
         return param_values
     
+    def update_infection_status(self, week_data):
+        new_infections = np.random.rand(self.size) < self.infection_rate
+        self.data.loc[new_infections, 'covid_infections'] += 1
+        self.data.loc[new_infections, 'last_infection_date'] = week_data['week_start']
+    
     def calculate_long_covid_risk(self, week_data):
         # Calculate the COVID risk adjustment based on the number of years passed
         years_passed = (week_data['week_start'] - self.current_date).days // 365
@@ -127,6 +132,7 @@ class Simulation:
 
     def simulate_week(self, week_data):
         self.population.reset_long_covid_status()
+        self.population.update_infection_status(week_data)
         self.population.calculate_long_covid_risk(week_data)
         self.record_weekly_statistics(week_data)
 
