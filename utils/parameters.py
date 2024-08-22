@@ -27,12 +27,11 @@ default_params = {
     'p_two_shots': 0.5,
     'p_boosted_yearly': 0.3,
     'covid_risk_reduction_factor': 0.7
-    # Default values for other parameters
 }
 
 robustness_params = {
     'baseline_risk': [0.1, 0.15, 0.2],
-    'infection_rate': [0.01, 0.03, 0.05],
+    'infection_rate': [x / (330_000_000 * 52) for x in [6687391, 19202639, 40968288]],
     'vaccination_reduction': [0.15, 0.25, 0.35],
     'vaccination_effectiveness_halflife': [75, 148, 300],
     'covid_risk_reduction_factor' : [0.5, 0.7, 0.9]
