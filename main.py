@@ -163,6 +163,9 @@ def main():
     except Exception as e:
         logging.error('Error running robustness checks: %s', e)
 
+    # # Tornado plot
+    plots.plot_tornado_diagram("output/tables/robustness", output_file="output/plots/robustness_tornado_diagram.png")
+
     logging.info('Data processing completed.')
 
 
