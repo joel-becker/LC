@@ -19,8 +19,8 @@ logging.info('Data processing started.')
 
 def main():
     years = 3
-    n_simulations = 5
-    population_size_deflator = 300_000
+    n_simulations = 3
+    population_size_deflator = 30_000
 
     # Setup logging
     logging.basicConfig(filename='data_processing.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -119,8 +119,8 @@ def main():
     #plots.plot_all_symptoms(
     #    spe.trace, data_symptom_prevalence['symptom'].unique().tolist(), time_points=np.linspace(0, 18, 100)
     #    ) # Symptom prevalence, decay over time
-    plots.plot_symptom_prevalence_over_time(df_symptom_integrals, "output/plots/symptom_prevalence_over_time.png")
-    plots.plot_symptom_years_histograms(df_symptom_integrals, num_subplots=3) # Symptom prevalence, total years
+    plots.plot_symptom_prevalence_over_time(data_symptom_prevalence, "output/plots/symptom_prevalence_over_time.png")
+    #plots.plot_symptom_years_histograms(df_symptom_integrals, num_subplots=3) # Symptom prevalence, total years
     # # Internal simulation outcomes over time
     plots.plot_daly_loss_over_time(df_merged, population_size_deflator, "output/plots/daly_loss_over_time.png") # Total welfare loss, over time
 
